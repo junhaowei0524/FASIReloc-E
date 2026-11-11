@@ -167,23 +167,6 @@ datasets/
 
 
 
-## Training
-
-**Training Compress Feature Gaussian**
-
-```bash
-# no partition
-bash scripts/train_7scenes.sh
-bash scripts/train_cambridge.sh
-
-# with partition
-bash scripts/train_7scenes_partition.sh
-bash scripts/train_cambridge_partition.sh
-
-```
-
-
-
 ## Evaluation
 
 ```bash
@@ -198,7 +181,7 @@ bash scripts/evaluate_independent_cambridge.sh
 
 
 
-## Note
+## Code Availability
 
-During the review process, only part of the code is publicly available. The complete code will be released upon acceptance of the paper.
+During the review process, this repository provides the inference and evaluation code for FASIReloc-E under both scene-dependent and scene-independent settings. The current release supports camera relocalization using reconstructed Gaussian maps. The code for Gaussian map training, feature distillation, compression, and decompression will be made publicly available upon acceptance of the paper.
 

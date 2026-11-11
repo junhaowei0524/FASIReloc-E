@@ -142,8 +142,7 @@ class FASIReloc_E:
         self.detector = SalientSampleDetector(self.feature_extractor.feature_dim)   
         self.detector.load_state_dict(
             torch.load(
-                os.path.join(config["detector_path"],
-                             "detector/30000_detector.pth")
+                os.path.join(config["path"], "detector/30000_detector.pth")
             )
         )  
         self.detector.eval().cuda()  
@@ -479,7 +478,7 @@ if __name__ == "__main__":
     config["feature_type"] = dataset.feature_type   
     config["longest_edge"] = dataset.longest_edge   
     config["model_path"] = dataset.model_path   
-    config["detector_path"] = dataset.path
+    config["path"] = dataset.path
 
     match_config = get_cfg_defaults()
     match_config.merge_from_file(args.main_cfg_path)
