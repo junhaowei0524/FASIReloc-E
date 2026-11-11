@@ -26,8 +26,8 @@ Experiments on four public benchmarks demonstrate competitive localization accur
 Our experiments were conducted on **Ubuntu 22.04** with **CUDA 12.1** and **Python 3.8**. While the codebase is expected to be compatible with similar configurations, it has not been extensively tested beyond the reported setup.
 
 ```bash
-# 1. Create the Conda environment
-conda env create -f environment.yml
+# 1. Create a Conda environment with Python 3.8
+conda create -n fasireloc-e python=3.8 -y
 conda activate fasireloc-e
 
 # 2. Install PyTorch with CUDA 12.1 support
@@ -47,7 +47,8 @@ python -m pip install --no-build-isolation \
 # 6. Install the simple-knn CUDA extension
 git clone --recursive https://github.com/graphdeco-inria/gaussian-splatting.git ../gaussian-splatting
 
-python -m pip install --no-build-isolation  ../gaussian-splatting/submodules/simple-knn
+python -m pip install --no-build-isolation \
+  ../gaussian-splatting/submodules/simple-knn
 ```
 
 
