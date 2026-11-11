@@ -170,19 +170,40 @@ datasets/
 
 ## Evaluation
 
+````bash
+
+## Evaluation
+
+Before evaluation, decompress the SAPC-compressed Gaussian maps and save the reconstructed `point_cloud.ply` files to their corresponding scene directories.
+Each map only needs to be decompressed once.
+
+### Step 1: Map Decompression
+
 ```bash
-# scene-dependent
+# 7 Scenes
+bash scripts/decompress_7scenes.sh
+
+# Cambridge Landmarks
+bash scripts/decompress_cambridge.sh
+```
+
+### Step 2: Camera Relocalization
+
+```bash
+# Scene-dependent
 bash scripts/evaluate_dependent_7scenes.sh
 bash scripts/evaluate_dependent_cambridge.sh
 
-# scene-independent
+# Scene-independent
 bash scripts/evaluate_independent_7scenes.sh
 bash scripts/evaluate_independent_cambridge.sh
 ```
+
+````
 
 
 
 ## Code Availability
 
-During the review process, this repository provides the inference and evaluation code for FASIReloc-E under both scene-dependent and scene-independent settings. The current release supports camera relocalization using reconstructed Gaussian maps. The code for Gaussian map training, feature distillation, compression, and decompression will be made publicly available upon acceptance of the paper.
+During the review process, this repository provides the map decompression, inference, and evaluation code for FASIReloc-E under both scene-dependent and scene-independent settings. The current release supports camera relocalization using SAPC-compressed Gaussian maps, which are reconstructed before evaluation. The code for Gaussian map training, feature distillation, and compression will be made publicly available upon acceptance of the paper.
 

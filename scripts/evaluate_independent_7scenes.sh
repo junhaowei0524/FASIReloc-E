@@ -1,10 +1,16 @@
+#!/bin/bash
+set -e
+
 export PYTHONPATH="JamMa:$PYTHONPATH"
 
-python fasireloc_e_independent.py -m map/7scenes/chess --cfg configs/fasireloc_e_indoor.yaml --main_cfg_path JamMa/configs/jamma/indoor/test.py --path map/scannet
-python fasireloc_e_independent.py -m map/7scenes/fire --cfg configs/fasireloc_e_indoor.yaml --main_cfg_path JamMa/configs/jamma/indoor/test.py --path map/scannet
-python fasireloc_e_independent.py -m map/7scenes/heads --cfg configs/fasireloc_e_indoor.yaml --main_cfg_path JamMa/configs/jamma/indoor/test.py --path map/scannet
-python fasireloc_e_independent.py -m map/7scenes/office --cfg configs/fasireloc_e_indoor.yaml --main_cfg_path JamMa/configs/jamma/indoor/test.py --path map/scannet
-python fasireloc_e_independent.py -m map/7scenes/pumpkin --cfg configs/fasireloc_e_indoor.yaml --main_cfg_path JamMa/configs/jamma/indoor/test.py --path map/scannet
-python fasireloc_e_independent.py -m map/7scenes/redkitchen --cfg configs/fasireloc_e_indoor.yaml --main_cfg_path JamMa/configs/jamma/indoor/test.py --path map/scannet
-python fasireloc_e_independent.py -m map/7scenes/stairs --cfg configs/fasireloc_e_indoor.yaml --main_cfg_path JamMa/configs/jamma/indoor/test.py --path map/scannet
- 
+for scene in chess fire heads office pumpkin redkitchen stairs; do
+    echo "========== Evaluating ${scene} =========="
+
+    python fasireloc_e_independent.py \
+        -m "map/7scenes/${scene}" \
+        --cfg configs/fasireloc_e_indoor.yaml \
+        --main_cfg_path JamMa/configs/jamma/indoor/test.py \
+        --path map/scannet
+done
+
+echo "All 7 Scenes evaluations completed."
