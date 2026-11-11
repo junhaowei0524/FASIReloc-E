@@ -1,0 +1,200 @@
+# PartRGLoc: Localization-Oriented Covisibility Partitioning for Scalable Regression-to-Gaussian Camera Relocalization
+
+## Overiew
+
+![image-20260822104806843](imgs/pipeline.png)
+
+
+
+## Abstract
+
+Camera relocalization is a key capability for Augmented Reality (AR) and spatial computing systems, where accurate camera pose estimation is essential for aligning physical and virtual environments. However, scaling relocalization to large environments faces two complementary challenges. Specifically, regression-based methods struggle to learn increasingly complex scene mappings. In contrast, Gaussian-based methods incur rapidly growing representation and GPU memory costs. Existing scene partitioning strategies typically address either regression complexity or scalable scene reconstruction, but are not designed to jointly support coarse localization and dense Gaussian pose refinement.
+To address these challenges, we present PartRGLoc, a scalable regression-to-Gaussian relocalization framework built upon a shared partition prior. At its core, we introduce Approximate Covisibility Partitioning (ACP), which jointly considers spatial proximity, viewing-direction consistency, and visual appearance to construct compact and localization-coherent scene partitions. We further develop a cross-representation partition alignment strategy that transfers image-level partition labels to reconstructed 3D geometry, yielding consistently partitioned regression models and Feature Gaussian maps. During inference, PartRGLoc identifies the relevant local partition, estimates an initial pose using the corresponding regression model, and subsequently refines the pose through dense matching against the local Feature Gaussian representation.
+Experiments across indoor, outdoor, autonomous-driving, and large-scale indoor benchmarks demonstrate that PartRGLoc achieves state-of-the-art localization accuracy across all evaluated scenes. Compared with existing Gaussian-based methods, PartRGLoc achieves faster inference, while ACP substantially reduces GPU memory consumption, enabling scalable relocalization for large-scale AR applications.
+
+
+
+## Comparison
+
+![](imgs/comparision.png)
+
+
+## Environment Setup and Installation
+
+Our experiments were conducted on **Ubuntu 22.04** with **CUDA 12.1** and **Python 3.8**. While the codebase is expected to be compatible with similar configurations, it has not been extensively tested beyond the reported setup.
+
+```bash
+# 1. Create the Conda environment
+conda env create -f environment.yml
+conda activate fasireloc-e
+
+# 2. Install PyTorch with CUDA 12.1 support
+python -m pip install torch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 \
+  --index-url https://download.pytorch.org/whl/cu121
+
+# 3. Install the required Python dependencies
+python -m pip install -r requirements.txt
+
+# 4. Install Mamba-SSM
+python -m pip install mamba-ssm==2.2.2 --no-build-isolation
+
+# 5. Install gsplat from the specified Git commit
+python -m pip install --no-build-isolation \
+  "git+https://github.com/nerfstudio-project/gsplat.git@4d3a3b69db4de0326f983ccf7b7b255271a17b01"
+
+# 6. Install the simple-knn CUDA extension
+git clone --recursive https://github.com/graphdeco-inria/gaussian-splatting.git ../gaussian-splatting
+
+python -m pip install --no-build-isolation  ../gaussian-splatting/submodules/simple-knn
+```
+
+
+
+## Dataset
+
+**Data structure**
+
+We use six public datasets：
+
+- [Scannet](https://github.com/ScanNet/ScanNet)
+- [MegaDepth](https://www.cs.cornell.edu/projects/megadepth/)
+- [Microsoft 7-Scenes](https://www.microsoft.com/en-us/research/project/rgb-d-dataset-7-scenes/)
+- [Cambridge Landmarks](https://www.repository.cam.ac.uk/handle/1810/251342/)
+- [12 Scenes](https://graphics.stanford.edu/projects/reloc/)
+- [MARS](https://ai4ce.github.io/MARS/)
+
+All datasets are organized under the `datasets/` directory of the project page, following a unified directory structure:
+
+```bash
+datasets/
+├── 7scenes/
+│   ├── chess/
+│   └── fire/
+│   └── .../
+├── cambridge/
+│   ├── GreatCourt/
+│   └── ...
+└── ...
+```
+
+**Scannet、MegaDepth**
+
+1. Download datasets following their official link.
+
+**7 Scenes**
+
+1. Download images following [HLoc](https://github.com/cvg/Hierarchical-Localization).
+
+   ```bash
+   export dataset=datasets/7scenes
+   for scene in chess fire heads office pumpkin redkitchen stairs; \
+   do wget http://download.microsoft.com/download/2/8/5/28564B23-0828-408F-8631-23B1EFF1DAC8/$scene.zip -P $dataset \
+   && unzip $dataset/$scene.zip -d $dataset && unzip $dataset/$scene/'*.zip' -d $dataset/$scene; done
+   ```
+
+2. Download full reconstructions from [visloc_pseudo_gt_limitations](https://github.com/tsattler/visloc_pseudo_gt_limitations/tree/main?tab=readme-ov-file#full-reconstructions):
+
+   ```bash
+   pip install gdown
+   gdown 1ATijcGCgK84NKB4Mho4_T-P7x8LSL80m -O $dataset/7scenes_reference_models.zip
+   unzip $dataset/7scenes_reference_models.zip -d $dataset
+   # move sfm_gt to each dataset
+   for scene in chess fire heads office pumpkin redkitchen stairs; \
+   do mkdir -p $dataset/$scene/sparse && cp -r $dataset/7scenes_reference_models/$scene/sfm_gt $dataset/$scene/sparse/0 ; done
+   ```
+
+**Cambridge**
+
+1. Download images from [PoseNet](https://www.repository.cam.ac.uk/items/53788265-cb98-42ee-b85b-7a0cbc8eddb3)'s project page:
+
+   ```bash
+   export dataset=datasets/cambridge
+   export scenes=( "KingsCollege" "OldHospital" "StMarysChurch" "ShopFacade" "GreatCourt" )
+   export IDs=( "251342" "251340" "251294" "251336" "251291" )
+   for i in "${!scenes[@]}"; do
+   wget https://www.repository.cam.ac.uk/bitstream/handle/1810/${IDs[i]}/${scenes[i]}.zip -P $dataset \
+   && unzip $dataset/${scenes[i]}.zip -d $dataset ; done
+   ```
+
+2. Install Mask2Former:
+
+   ```bash
+   cd submodules/Mask2Former
+   pip install -r requirements.txt
+   python -m pip install 'git+https://github.com/facebookresearch/detectron2.git'
+   cd mask2former/modeling/pixel_decoder/ops
+   sh make.sh
+   cd ../../../..
+   # download model
+   wget https://dl.fbaipublicfiles.com/maskformer/mask2former/coco/panoptic/maskformer2_swin_large_IN21k_384_bs16_100ep/model_final_f07440.pkl
+   cd ../..
+   ```
+
+3. Preprocess data:
+
+   ```bash
+   bash scripts/dataset_preprocess.sh
+   ```
+
+**12 Scenes**
+
+1. Download images following [HLoc](https://github.com/cvg/Hierarchical-Localization).
+
+   ```bash
+   export dataset=datasets/12scenes
+   for scene in apt1 apt2 office1 office2; \
+   do wget https://graphics.stanford.edu/projects/reloc/data/$scene.zip -P $dataset \
+   && unzip $dataset/$scene.zip -d $dataset && unzip $dataset/$scene/'*.zip' -d $dataset/$scene; done
+   ```
+
+2. Download full reconstructions from [visloc_pseudo_gt_limitations](https://github.com/tsattler/visloc_pseudo_gt_limitations/tree/main?tab=readme-ov-file#full-reconstructions):
+
+   ```bash
+   pip install gdown
+   gdown 1u5du-cYp3J3-BfybZVkhvgv0PPua8tud -O $dataset/12scenes_reference_models.zip
+   unzip $dataset/12scenes_reference_models.zip -d $dataset
+   # move sfm_gt to each dataset
+   for scene in apt1/kitchen apt1/living apt2/bed apt2/kitchen apt2/living apt2/luke office1/gates362 office1/gates381 office1/lounge office1/manolis office2/5a office2/5b; 
+   do mkdir -p "$dataset/$scene/data/sparse" && cp -r $dataset/12scenes_reference_models/$scene/sfm_gt $dataset/$scene/sparse/0/ ;
+   done
+   ```
+
+**MARS**
+
+1. Download datasets and full reconstructions following [RAP](https://github.com/ai4ce/RAP).
+
+## Training
+
+**Training Compress Feature Gaussian**
+
+```bash
+# no partition
+bash scripts/train_7scenes.sh
+bash scripts/train_cambridge.sh
+
+# with partition
+bash scripts/train_7scenes_partition.sh
+bash scripts/train_cambridge_partition.sh
+
+```
+
+
+
+## Evaluation
+
+```bash
+# scene-dependent
+bash scripts/evaluate_dependent_7scenes.sh
+bash scripts/evaluate_dependent_cambridge.sh
+
+# scene-independent
+bash scripts/evaluate_independent_7scenes.sh
+bash scripts/evaluate_independent_cambridge.sh
+```
+
+
+
+## Note
+
+During the review process, only part of the code is publicly available. The complete code will be released upon acceptance of the paper.
+
