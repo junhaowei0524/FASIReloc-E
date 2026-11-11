@@ -1,4 +1,4 @@
-# PartRGLoc: Localization-Oriented Covisibility Partitioning for Scalable Regression-to-Gaussian Camera Relocalization
+# FASIReloc-E: Localization-Aware Compact Feature Gaussian Maps for Transferable Camera Relocalization
 
 ## Overiew
 
@@ -8,15 +8,17 @@
 
 ## Abstract
 
-Camera relocalization is a key capability for Augmented Reality (AR) and spatial computing systems, where accurate camera pose estimation is essential for aligning physical and virtual environments. However, scaling relocalization to large environments faces two complementary challenges. Specifically, regression-based methods struggle to learn increasingly complex scene mappings. In contrast, Gaussian-based methods incur rapidly growing representation and GPU memory costs. Existing scene partitioning strategies typically address either regression complexity or scalable scene reconstruction, but are not designed to jointly support coarse localization and dense Gaussian pose refinement.
-To address these challenges, we present PartRGLoc, a scalable regression-to-Gaussian relocalization framework built upon a shared partition prior. At its core, we introduce Approximate Covisibility Partitioning (ACP), which jointly considers spatial proximity, viewing-direction consistency, and visual appearance to construct compact and localization-coherent scene partitions. We further develop a cross-representation partition alignment strategy that transfers image-level partition labels to reconstructed 3D geometry, yielding consistently partitioned regression models and Feature Gaussian maps. During inference, PartRGLoc identifies the relevant local partition, estimates an initial pose using the corresponding regression model, and subsequently refines the pose through dense matching against the local Feature Gaussian representation.
-Experiments across indoor, outdoor, autonomous-driving, and large-scale indoor benchmarks demonstrate that PartRGLoc achieves state-of-the-art localization accuracy across all evaluated scenes. Compared with existing Gaussian-based methods, PartRGLoc achieves faster inference, while ACP substantially reduces GPU memory consumption, enabling scalable relocalization for large-scale AR applications.
+Feature Gaussian maps support accurate camera relocalization, but their high-dimensional descriptors and appearance attributes introduce substantial optimization and storage costs. Moreover, conventional Gaussian compression does not consider the different roles of Gaussian primitives in sparse initialization and dense refinement. We present FASIReloc-E, an efficient camera relocalization framework that combines compact feature representations with localization-aware attribute coding.
+Building on our previous FASIReloc framework, salient Gaussian anchors and a transferable saliency predictor provide reliable 2D--3D correspondences for initial pose estimation, while the complete Gaussian scene supports dense refinement. To reduce feature-related costs, Render-Space Feature Distillation (RSFD) adapts existing render-then-decode learning to camera relocalization by learning compact Gaussian descriptors under supervision from a fixed teacher feature extractor. The rendered features are decoded into the teacher descriptor space for correspondence estimation.
+Salient-Anchor-Preserved Coding (SAPC) further reduces map storage by retaining compact descriptors for all Gaussians, preserving the spherical harmonic (SH) coefficients of salient anchors, and vector-quantizing those of non-salient Gaussians. All Gaussian primitives are retained for dense rendering and pose refinement.The saliency predictor transfers to unseen scenes without fine-tuning, while Gaussian maps and feature decoders are optimized separately for each target scene.
+Experiments on four public benchmarks demonstrate competitive localization accuracy together with substantial reductions in Gaussian optimization and storage costs.
 
 
 
 ## Comparison
 
 ![](imgs/comparision.png)
+
 
 
 ## Environment Setup and Installation
@@ -162,6 +164,8 @@ datasets/
 **MARS**
 
 1. Download datasets and full reconstructions following [RAP](https://github.com/ai4ce/RAP).
+
+
 
 ## Training
 
