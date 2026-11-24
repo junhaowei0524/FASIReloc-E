@@ -1,6 +1,6 @@
 # FASIReloc-E: Localization-Aware Compact Feature Gaussian Maps for Transferable Camera Relocalization
 
-## Overiew
+## Overview
 
 ![image-20260822104806843](imgs/pipeline.png)
 
@@ -8,16 +8,23 @@
 
 ## Abstract
 
-Feature Gaussian maps support accurate camera relocalization, but their high-dimensional descriptors and appearance attributes introduce substantial optimization and storage costs. Moreover, conventional Gaussian compression does not consider the different roles of Gaussian primitives in sparse initialization and dense refinement. We present FASIReloc-E, an efficient camera relocalization framework that combines compact feature representations with localization-aware attribute coding.
-Building on our previous FASIReloc framework, salient Gaussian anchors and a transferable saliency predictor provide reliable 2D-3D correspondences for initial pose estimation, while the complete Gaussian scene supports dense refinement. To reduce feature-related costs, Render-Space Feature Distillation (RSFD) adapts existing render-then-decode learning to camera relocalization by learning compact Gaussian descriptors under supervision from a fixed teacher feature extractor. The rendered features are decoded into the teacher descriptor space for correspondence estimation.
-Salient-Anchor-Preserved Coding (SAPC) further reduces map storage by retaining compact descriptors for all Gaussians, preserving the spherical harmonic (SH) coefficients of salient anchors, and vector-quantizing those of non-salient Gaussians. All Gaussian primitives are retained for dense rendering and pose refinement.The saliency predictor transfers to unseen scenes without fine-tuning, while Gaussian maps and feature decoders are optimized separately for each target scene.
-Experiments on four public benchmarks demonstrate competitive localization accuracy together with substantial reductions in Gaussian optimization and storage costs.
+Reliable camera relocalization requires salient 3D landmarks for sparse pose initialization and sufficient scene coverage for dense refinement.
+Feature Gaussian maps support both stages but incur substantial optimization and storage costs due to high-dimensional descriptors.
+We present FASIReloc-E, an efficient relocalization framework that compresses Gaussian attributes according to their localization roles while retaining all Gaussian primitives.
+Render-Space Feature Distillation (RSFD) learns compact descriptors under supervision from a frozen SuperPoint teacher and decodes them into a shared feature space for sparse landmark matching and dense rendered-feature matching.
+Salient-Anchor-Preserved Coding (SAPC) extends the localization anchors introduced in FASIReloc to appearance preservation, retaining their spherical harmonic (SH) coefficients while vector-quantizing non-anchor SH coefficients.
+Compact localization descriptors are preserved without further vector quantization.
+A pretrained JamMa matcher supports dense correspondence refinement.
+The SSNet saliency predictor transfers to unseen scenes without fine-tuning, whereas Gaussian maps and feature decoders are optimized separately for each target scene.
+Experiments on four benchmarks demonstrate competitive localization accuracy with substantially improved representation efficiency.
+Ablations show that RSFD maintains reliable matching at both stages and that retaining non-anchor Gaussians with quantized SH provides higher pose recall than pruning at comparable map sizes.
+On 7 Scenes, FASIReloc-E reduces Gaussian optimization time, peak training GPU memory, and map storage by 71.1%, 52.1%, and 88.3%, respectively, compared with FASIReloc, while improving full-system recall at (2 cm, 2°) from 93.47% to 95.23%.
 
 
 
-## Comparison
+## Motivation
 
-![](imgs/comparision.png)
+![](imgs/motivation.png)
 
 
 
@@ -55,16 +62,25 @@ python -m pip install --no-build-isolation \
 
 ## Dataset
 
-**Data structure**
+**Data Preparation**
 
-We use six public datasets：
+We use six public datasets for training and evaluation.
 
-- [Scannet](https://github.com/ScanNet/ScanNet)
+**Source datasets for scene-independent SSNet training:**
+
+- [ScanNet](https://github.com/ScanNet/ScanNet)
 - [MegaDepth](https://www.cs.cornell.edu/projects/megadepth/)
+
+**Benchmark datasets for camera relocalization:**
+
 - [Microsoft 7-Scenes](https://www.microsoft.com/en-us/research/project/rgb-d-dataset-7-scenes/)
 - [Cambridge Landmarks](https://www.repository.cam.ac.uk/handle/1810/251342/)
 - [12 Scenes](https://graphics.stanford.edu/projects/reloc/)
 - [MARS](https://ai4ce.github.io/MARS/)
+
+
+
+**Data structure**
 
 All datasets are organized under the `datasets/` directory of the project page, following a unified directory structure:
 
@@ -80,7 +96,9 @@ datasets/
 └── ...
 ```
 
-**Scannet、MegaDepth**
+
+
+**ScanNet、MegaDepth**
 
 1. Download datasets following their official link.
 
@@ -158,7 +176,7 @@ datasets/
    unzip $dataset/12scenes_reference_models.zip -d $dataset
    # move sfm_gt to each dataset
    for scene in apt1/kitchen apt1/living apt2/bed apt2/kitchen apt2/living apt2/luke office1/gates362 office1/gates381 office1/lounge office1/manolis office2/5a office2/5b; 
-   do mkdir -p "$dataset/$scene/data/sparse" && cp -r $dataset/12scenes_reference_models/$scene/sfm_gt $dataset/$scene/sparse/0/ ;
+   do mkdir -p "$dataset/$scene/sparse" && cp -r $dataset/12scenes_reference_models/$scene/sfm_gt $dataset/$scene/sparse/0/ ;
    done
    ```
 
@@ -168,16 +186,50 @@ datasets/
 
 
 
+## Training
+
+````bash
+## Training
+
+### Step 1: Feature Gaussian Training
+
+Train feature Gaussian maps and scene-dependent SSNet.
+
+```bash
+# 7 Scenes
+bash scripts/train_dependent_7scenes.sh
+
+# Cambridge Landmarks
+bash scripts/train_dependent_cambridge.sh
+```
+
+### Step 2: Map Compression
+
+Compress the trained Gaussian maps using SAPC.
+
+```bash
+# 7 Scenes
+bash scripts/compress_7scenes.sh
+
+# Cambridge Landmarks
+bash scripts/compress_cambridge.sh
+```
+
+
+````
+
+
+
 ## Evaluation
 
 ````bash
 
 ## Evaluation
 
-Before evaluation, decompress the SAPC-compressed Gaussian maps and save the reconstructed `point_cloud.ply` files to their corresponding scene directories.
-Each map only needs to be decompressed once.
-
 ### Step 1: Map Decompression
+
+Reconstruct the SAPC-compressed Gaussian maps before evaluation.
+Each map only needs to be decompressed once.
 
 ```bash
 # 7 Scenes
@@ -189,15 +241,21 @@ bash scripts/decompress_cambridge.sh
 
 ### Step 2: Camera Relocalization
 
+**Scene-dependent**
+
 ```bash
-# Scene-dependent
 bash scripts/evaluate_dependent_7scenes.sh
 bash scripts/evaluate_dependent_cambridge.sh
+```
 
-# Scene-independent
+**Scene-independent**
+
+```bash
 bash scripts/evaluate_independent_7scenes.sh
 bash scripts/evaluate_independent_cambridge.sh
 ```
+
+Scene-independent evaluation requires SSNet checkpoints trained on source scenes without fine-tuning on target scenes.
 
 ````
 
@@ -205,5 +263,4 @@ bash scripts/evaluate_independent_cambridge.sh
 
 ## Code Availability
 
-During the review process, this repository provides the map decompression, inference, and evaluation code for FASIReloc-E under both scene-dependent and scene-independent settings. The current release supports camera relocalization using SAPC-compressed Gaussian maps, which are reconstructed before evaluation. The code for Gaussian map training, feature distillation, and compression will be made publicly available upon acceptance of the paper.
-
+During the review process, we provide Gaussian map training, feature distillation, compression, decompression, and evaluation code for 7 Scenes and Cambridge Landmarks under both localization settings. For scene-independent SSNet training, please refer to our conference version [FASIReloc](https://github.com/junhaowei0524/FASIReloc). The remaining materials will be made publicly available upon acceptance of the paper.
