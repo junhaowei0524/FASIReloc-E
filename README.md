@@ -17,7 +17,7 @@ Compact localization descriptors are preserved without further vector quantizati
 A pretrained JamMa matcher supports dense correspondence refinement.
 The SSNet saliency predictor transfers to unseen scenes without fine-tuning, whereas Gaussian maps and feature decoders are optimized separately for each target scene.
 Experiments on four benchmarks demonstrate competitive localization accuracy with substantially improved representation efficiency.
-Ablations show that RSFD maintains reliable matching at both stages and that retaining non-anchor Gaussians with quantized SH provides higher pose recall than pruning at comparable map sizes.
+Ablations reveal a favorable storage-accuracy trade-off and show that retaining non-anchor Gaussians with quantized SH yields higher pose recall than pruning at comparable map sizes.
 On 7 Scenes, FASIReloc-E reduces Gaussian optimization time, peak training GPU memory, and map storage by 71.1%, 52.1%, and 88.3%, respectively, compared with FASIReloc, while improving full-system recall at (2 cm, 2°) from 93.47% to 95.23%.
 
 
